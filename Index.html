@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benutzer ID Generator</title>
+    <script>
+        // Funktion zum Generieren einer eindeutigen ID
+        function generateUniqueID() {
+            return 'user-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Funktion zum Setzen eines Cookies
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+
+        // Funktion zum Abrufen eines Cookies
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        // Funktion zum Erstellen einer Benutzer-ID und Speichern als Cookie
+        function checkAndAssignUserID() {
+            let userID = getCookie('userID');
+            if (!userID) {
+                userID = generateUniqueID();
+                setCookie('userID', userID, 365); // Cookie für 1 Jahr speichern
+                console.log("Neue User-ID generiert:", userID);
+            } else {
+                console.log("Bestehende User-ID gefunden:", userID);
+            }
+            document.getElementById('userIDDisplay').innerText = userID;
+        }
+
+        // Funktion zum Download der User-Daten als Datei
+        function downloadUserData() {
+            const userID = getCookie('userID') || 'Keine ID gefunden';
+            const data = {
+                userID: userID,
+                timestamp: new Date().toLocaleString()
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute('href', dataStr);
+            downloadAnchor.setAttribute('download', 'user_data.json');
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            document.body.removeChild(downloadAnchor);
+        }
+
+        // User-ID beim Laden der Seite prüfen und zuweisen
+        window.onload = function() {
+            checkAndAssignUserID();
+        };
+    </script>
+</head>
+<body>
+    <h1>Benutzer-Tracking</h1>
+    <p>Ihre eindeutige Benutzer-ID ist: <span id="userIDDisplay">Lädt...</span></p>
+
+    <button onclick="downloadUserData()">Daten herunterladen</button>
+</body>
+</html>
