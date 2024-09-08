@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Benutzer ID Generator</title>
+    <title>Benutzer-Tracking mit Fingerprinting</title>
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
     <script>
-        // Funktion zum Generieren einer eindeutigen ID
-        function generateUniqueID() {
-            return 'user-' + Math.random().toString(36).substr(2, 9);
-        }
+        let userIP = '';
+        let geoData = {};
+        let fingerprintID = '';
 
         // Funktion zum Setzen eines Cookies
         function setCookie(name, value, days) {
@@ -33,25 +33,52 @@
             return null;
         }
 
-        // Funktion zum Erstellen einer Benutzer-ID und Speichern als Cookie
-        function checkAndAssignUserID() {
-            let userID = getCookie('userID');
-            if (!userID) {
-                userID = generateUniqueID();
-                setCookie('userID', userID, 365); // Cookie für 1 Jahr speichern
-                console.log("Neue User-ID generiert:", userID);
-            } else {
-                console.log("Bestehende User-ID gefunden:", userID);
-            }
-            document.getElementById('userIDDisplay').innerText = userID;
+        // Fingerprint abrufen und speichern
+        function fetchFingerprint() {
+            const fpPromise = FingerprintJS.load();
+
+            fpPromise.then(fp => fp.get()).then(result => {
+                fingerprintID = result.visitorId;
+                console.log("Geräte-Fingerprint:", fingerprintID);
+
+                // Fingerprint-ID in Cookies speichern
+                let storedFingerprint = getCookie('fingerprintID');
+                if (!storedFingerprint) {
+                    setCookie('fingerprintID', fingerprintID, 365);
+                } else {
+                    fingerprintID = storedFingerprint;
+                }
+                document.getElementById('fingerprintDisplay').innerText = fingerprintID;
+            });
+        }
+
+        // Funktion zum Abrufen der IP und Geolocation-Daten
+        function fetchIPAndLocation() {
+            fetch('https://ipapi.co/json/')
+                .then(response => response.json())
+                .then(data => {
+                    userIP = data.ip;
+                    geoData = {
+                        city: data.city,
+                        region: data.region,
+                        country: data.country_name,
+                        postal: data.postal,
+                        latitude: data.latitude,
+                        longitude: data.longitude
+                    };
+                    console.log("IP-Adresse:", userIP);
+                    console.log("Geolocation-Daten:", geoData);
+                })
+                .catch(error => console.error('Fehler beim Abrufen der IP/Geolocation-Daten:', error));
         }
 
         // Funktion zum Download der User-Daten als Datei
         function downloadUserData() {
-            const userID = getCookie('userID') || 'Keine ID gefunden';
             const data = {
-                userID: userID,
-                timestamp: new Date().toLocaleString()
+                fingerprintID: fingerprintID,
+                timestamp: new Date().toLocaleString(),
+                ip: userIP,
+                location: geoData
             };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
             const downloadAnchor = document.createElement('a');
@@ -62,15 +89,15 @@
             document.body.removeChild(downloadAnchor);
         }
 
-        // User-ID beim Laden der Seite prüfen und zuweisen
         window.onload = function() {
-            checkAndAssignUserID();
+            fetchFingerprint();
+            fetchIPAndLocation();
         };
     </script>
 </head>
 <body>
-    <h1>Benutzer-Tracking</h1>
-    <p>Ihre eindeutige Benutzer-ID ist: <span id="userIDDisplay">Lädt...</span></p>
+    <h1>Benutzer-Tracking mit Fingerprinting</h1>
+    <p>Ihr Geräte-Fingerprint ist: <span id="fingerprintDisplay">Lädt...</span></p>
 
     <button onclick="downloadUserData()">Daten herunterladen</button>
 </body>
